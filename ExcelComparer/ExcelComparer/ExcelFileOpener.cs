@@ -1,17 +1,13 @@
-﻿using System;
-using System.IO;
-using System.Threading;
+﻿using System.IO;
 using OfficeOpenXml;
 
 namespace ExcelComparer
 {
     internal class ExcelFileOpener
     {
-        public static int OpenFileCount = 0;//文件打开总次数
 
         public static ExcelPackage Open(FileInfo file, bool isWrite)
         {
-            OpenFileCount++;
             if (isWrite)
             {
                 return OpenWrite(file);

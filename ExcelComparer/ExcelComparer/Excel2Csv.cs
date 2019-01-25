@@ -18,7 +18,7 @@ namespace ExcelComparer
 
                 for (int i = 1; i <= workbook.Worksheets.Count; i++)
                 {
-                    ConvertSheet(workbook.Worksheets[i], sw);
+                    WriteSheet(workbook.Worksheets[i], sw);
                 }
             }
 
@@ -26,7 +26,7 @@ namespace ExcelComparer
             return tempFile;
         }
 
-        private static void ConvertSheet(ExcelWorksheet sheetIn, StreamWriter sw)
+        private static void WriteSheet(ExcelWorksheet sheetIn, StreamWriter sw)
         {
             if (sheetIn.Name.StartsWith("~") || sheetIn.Dimension == null)
                 return;
