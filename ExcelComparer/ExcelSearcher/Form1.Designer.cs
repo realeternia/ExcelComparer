@@ -30,15 +30,17 @@
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.textBox1 = new System.Windows.Forms.TextBox();
-            this.richTextBoxEx1 = new RichTextBoxLinks.RichTextBoxEx();
             this.buttonSearch = new System.Windows.Forms.Button();
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
+            this.richTextBoxEx1 = new RichTextBoxLinks.RichTextBoxEx();
             this.SuspendLayout();
             // 
             // textBox1
             // 
             this.textBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.textBox1.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.Suggest;
+            this.textBox1.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.CustomSource;
             this.textBox1.Font = new System.Drawing.Font("宋体", 11F);
             this.textBox1.Location = new System.Drawing.Point(7, 18);
             this.textBox1.Name = "textBox1";
@@ -46,24 +48,6 @@
             this.textBox1.TabIndex = 2;
             this.textBox1.Text = "荆轲";
             this.textBox1.KeyUp += new System.Windows.Forms.KeyEventHandler(this.textBox1_KeyUp);
-            // 
-            // richTextBoxEx1
-            // 
-            this.richTextBoxEx1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.richTextBoxEx1.BackColor = System.Drawing.Color.White;
-            this.richTextBoxEx1.Font = new System.Drawing.Font("宋体", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.richTextBoxEx1.ForeColor = System.Drawing.Color.Black;
-            this.richTextBoxEx1.Location = new System.Drawing.Point(7, 53);
-            this.richTextBoxEx1.Name = "richTextBoxEx1";
-            this.richTextBoxEx1.ReadOnly = true;
-            this.richTextBoxEx1.Size = new System.Drawing.Size(1133, 651);
-            this.richTextBoxEx1.TabIndex = 3;
-            this.richTextBoxEx1.Text = "第一次使用初始化比较慢，请不要害怕\n为了提速，搜索目标实际是缓存文件，而不是excel文件\nsvn更新或手动修改excel文件时，会自动刷新缓存（下方进度条会移动" +
-    "）\n如果搜索结果过多，最多显示1000条";
-            this.richTextBoxEx1.WordWrap = false;
-            this.richTextBoxEx1.LinkClicked += new System.Windows.Forms.LinkClickedEventHandler(this.richTextBoxEx1_LinkClicked);
             // 
             // buttonSearch
             // 
@@ -83,6 +67,24 @@
             this.progressBar1.Name = "progressBar1";
             this.progressBar1.Size = new System.Drawing.Size(1149, 15);
             this.progressBar1.TabIndex = 5;
+            // 
+            // richTextBoxEx1
+            // 
+            this.richTextBoxEx1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.richTextBoxEx1.BackColor = System.Drawing.Color.White;
+            this.richTextBoxEx1.Font = new System.Drawing.Font("宋体", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.richTextBoxEx1.ForeColor = System.Drawing.Color.Black;
+            this.richTextBoxEx1.Location = new System.Drawing.Point(7, 53);
+            this.richTextBoxEx1.Name = "richTextBoxEx1";
+            this.richTextBoxEx1.ReadOnly = true;
+            this.richTextBoxEx1.Size = new System.Drawing.Size(1133, 651);
+            this.richTextBoxEx1.TabIndex = 3;
+            this.richTextBoxEx1.Text = "第一次使用初始化比较慢，请不要害怕\n为了提速，搜索目标实际是缓存文件，而不是excel文件\nsvn更新或手动修改excel文件后，程序会自动刷新缓存（下方进度条会" +
+    "移动）\n如果搜索结果过多，最多只显示1000条";
+            this.richTextBoxEx1.WordWrap = false;
+            this.richTextBoxEx1.LinkClicked += new System.Windows.Forms.LinkClickedEventHandler(this.richTextBoxEx1_LinkClicked);
             // 
             // Form1
             // 

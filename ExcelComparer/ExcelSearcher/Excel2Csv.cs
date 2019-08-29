@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using OfficeOpenXml;
+using OfficeOpenXml.FormulaParsing.Excel.Functions.Logical;
 
 namespace ExcelSearcher
 {
@@ -50,7 +51,14 @@ namespace ExcelSearcher
                     var r = "\t";
                     if (cell != null)
                     {
-                        r = cell.ToString().Replace("\n", "") + "\t";
+                        r = cell.ToString().Replace("\n", "");
+                        int c;
+                        if (!int.TryParse(r, out c) && r.Length > 1 && r.Length <= 5)
+                        {
+                            //数字不要，字符长度大于5的不要
+                            KeywordManager.SetKeyword(r);
+                        }
+                        r += "\t";
                     }
 
                     sw.Write(r); 

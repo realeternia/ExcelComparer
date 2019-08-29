@@ -14,6 +14,7 @@ namespace ExcelSearcher
     {
         private delegate void DGSetProgress(float percent);
         private DGSetProgress SetProgress;
+
         private void SetProgressSafe(float percent)
         {
             if (this.InvokeRequired)
@@ -35,6 +36,9 @@ namespace ExcelSearcher
         private void Form1_Load(object sender, EventArgs e)
         {
             FileAccessTimeManager.Load();
+            KeywordManager.Init();
+            textBox1.AutoCompleteCustomSource = KeywordManager.Get();
+
             rebuildThread = new Thread(CheckRebuild);
             rebuildThread.IsBackground = true;
             rebuildThread.Start();
@@ -50,7 +54,7 @@ namespace ExcelSearcher
                 Directory.CreateDirectory("./cache");
             }
 
-            if (excelPath == null || excelPath == "")
+            if (string.IsNullOrEmpty(excelPath))
             {
                 return;
             }
@@ -84,6 +88,8 @@ namespace ExcelSearcher
                 }
                 FileAccessTimeManager.Save();
                 SetProgressSafe(1);
+
+                textBox1.AutoCompleteCustomSource = KeywordManager.Get();
             }
         }
 
