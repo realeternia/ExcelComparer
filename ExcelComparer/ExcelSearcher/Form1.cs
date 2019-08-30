@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Text;
@@ -20,7 +19,35 @@ namespace ExcelSearcher
             if (this.InvokeRequired)
                 this.Invoke(this.SetProgress, percent);
             else
-                progressBar1.Value = (int)(percent * 100);
+            {
+                toolStripProgressBar1.Value = (int) (percent * 100);
+                toolStripProgressBar1.Visible = percent < 1;
+            }
+        }
+
+        private delegate void DGUpdateTextboxSource(AutoCompleteStringCollection src);
+        private DGUpdateTextboxSource UpdateTextboxSource;
+
+        private void UpdateTextboxSourceSafe(AutoCompleteStringCollection src)
+        {
+            if (this.InvokeRequired)
+                this.Invoke(this.UpdateTextboxSource, src);
+            else
+                textBox1.AutoCompleteCustomSource = src;
+        }
+
+        private delegate void DGUpdateStatueBarText(string txt);
+        private DGUpdateStatueBarText UpdateStatueBarText;
+
+        private void UpdateStatueBarTextSafe(string txt)
+        {
+            if (this.InvokeRequired)
+                this.Invoke(this.UpdateStatueBarText, txt);
+            else
+            {
+                toolStripStatusLabel1.Text = string.Format("{0} {1}", DateTime.Now, txt);
+                statusStrip1.Invalidate();
+            }
         }
 
         private string excelPath = "";
@@ -30,12 +57,25 @@ namespace ExcelSearcher
         {
             InitializeComponent();
 
-            SetProgress = new DGSetProgress(a => progressBar1.Value = (int) (a * 100));
+            SetProgress = new DGSetProgress(a =>
+            {
+                toolStripProgressBar1.Value = (int) (a * 100);
+                toolStripProgressBar1.Visible = a < 1;
+            }); 
+            UpdateTextboxSource = new DGUpdateTextboxSource(a => textBox1.AutoCompleteCustomSource = a);
+            UpdateStatueBarText = new DGUpdateStatueBarText(a => toolStripStatusLabel1.Text = string.Format("{0} {1}", DateTime.Now, a));
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
             FileAccessTimeManager.Load();
+            if (File.Exists("config"))
+            {
+                using (var sr = new StreamReader("config"))
+                {
+                    excelPath = sr.ReadLine();
+                }
+            }
             KeywordManager.Init();
             textBox1.AutoCompleteCustomSource = KeywordManager.Get();
 
@@ -75,6 +115,7 @@ namespace ExcelSearcher
 
             if (toConvertList.Count > 0)
             {
+                UpdateStatueBarTextSafe("开始重建缓存");
                 var total = toConvertList.Count;
                 int done = 0;
                 SetProgressSafe(0);
@@ -88,8 +129,8 @@ namespace ExcelSearcher
                 }
                 FileAccessTimeManager.Save();
                 SetProgressSafe(1);
-
-                textBox1.AutoCompleteCustomSource = KeywordManager.Get();
+                UpdateTextboxSourceSafe(KeywordManager.Get());
+                UpdateStatueBarTextSafe("重建缓存完成");
             }
         }
 
@@ -97,7 +138,14 @@ namespace ExcelSearcher
         {
             while (true)
             {
-                RebuildCache();
+                try
+                {
+                    RebuildCache();
+                }
+                catch (Exception)
+                {
+                }
+                
                 Thread.Sleep(5 * 1000);
             }
         }
@@ -126,30 +174,14 @@ namespace ExcelSearcher
 
         private void DoSearch()
         {
-            if (File.Exists("config"))
-            {
-                using (var sr = new StreamReader("config"))
-                {
-                    excelPath = sr.ReadLine();
-                }
-            }
-            else
-            {
-                var openFileDialog = new FolderBrowserDialog();
-                openFileDialog.Description = "请选择配表xlsx文件所在的目录";
-                openFileDialog.ShowDialog();
-                openFileDialog.ShowNewFolderButton = false;
-                excelPath = openFileDialog.SelectedPath;
-                if (!string.IsNullOrEmpty(excelPath))
-                {
-                    using (var sw = new StreamWriter("config"))
-                    {
-                        sw.Write(excelPath);
-                    }
-                }
-            }
-
+            UpdateStatueBarTextSafe("开始搜索");
+            Invalidate();
             richTextBoxEx1.Clear();
+            if (string.IsNullOrEmpty(excelPath))
+            {
+                richTextBoxEx1.SelectedText = "请先点击'绑定目录'选择绑定table文件夹";
+                return;
+            }
             int itemCount = 0;
             foreach (var file in Directory.GetFiles("./cache/"))
             {
@@ -172,10 +204,12 @@ namespace ExcelSearcher
                                 {
                                     // 第一次进入先拼一个表头
                                     richTextBoxEx1.SelectionColor = Color.Red;
-                                    var fileName = fileInfo.Name.Replace(".txt", "");
-                                    if (fileName.Length > 16)
-                                        fileName = fileName.Substring(0, 16);
-                                    richTextBoxEx1.SelectedText = string.Format("{0,16}\t", fileName);
+                                    var fileNames = fileInfo.Name.Replace(".txt", "").Split('-');
+                                    if (fileNames[0].Length > 8)
+                                        fileNames[0] = fileNames[0].Substring(0, 8);
+                                    if (fileNames[1].Length > 8)
+                                        fileNames[1] = fileNames[1].Substring(0, 8);
+                                    richTextBoxEx1.SelectedText = string.Format("{0,-8}\t{1,-8}\t#{2:####}\t", fileNames[0], fileNames[1], lineIndx+14);
                                     richTextBoxEx1.SelectionColor = Color.Black;
                                 }
 
@@ -199,6 +233,7 @@ namespace ExcelSearcher
                                 itemCount++;
                                 if (itemCount >= 1000)
                                 {
+                                    UpdateStatueBarTextSafe(string.Format("搜索结束:记录数达到上限，共找到记录{0}条", itemCount));
                                     //最多出1000条，抱歉
                                     return;
                                 }
@@ -209,6 +244,8 @@ namespace ExcelSearcher
                     }
                 }
             }
+
+            UpdateStatueBarTextSafe(string.Format("搜索结束:共找到记录{0}条", itemCount));
             //防止link点击后乱跳转的bug
             this.richTextBoxEx1.Select(0, 0);
         }
@@ -250,5 +287,28 @@ namespace ExcelSearcher
             return string.Join(string.Empty, chars.ToArray())+y;
         }
 
+        private void buttonBind_Click(object sender, EventArgs e)
+        {
+            var openFileDialog = new FolderBrowserDialog();
+            openFileDialog.Description = "请选择配表xlsx文件所在的目录";
+            openFileDialog.ShowDialog();
+            openFileDialog.ShowNewFolderButton = false;
+            excelPath = openFileDialog.SelectedPath;
+            if (!string.IsNullOrEmpty(excelPath))
+            {
+                using (var sw = new StreamWriter("config"))
+                {
+                    sw.Write(excelPath);
+                }
+
+                if (Directory.Exists("./cache/"))
+                {//切目录时，cache清理掉
+                    Directory.Delete("./cache/", true);
+                }
+                FileAccessTimeManager.FileModifyDict.Clear();
+            }
+
+            UpdateStatueBarTextSafe("绑定成功，请耐心等待重建缓存");
+        }
     }
 }
