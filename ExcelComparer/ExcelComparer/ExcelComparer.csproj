@@ -5,7 +5,7 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{0FDD5D3E-4571-4739-8D3D-E479CA08F43E}</ProjectGuid>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Exe</OutputType>
     <RootNamespace>ExcelComparer</RootNamespace>
     <AssemblyName>ExcelComparer</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
