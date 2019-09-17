@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Threading;
 
@@ -39,7 +40,15 @@ namespace ExcelComparer
             t1.Join();
             t2.Join();
 
-            System.Diagnostics.Process.Start(tortoiseMergePos, string.Format("{0} {1}", csvOldFile, csvNewFile));
+            var exePath = System.AppDomain.CurrentDomain.BaseDirectory + "/bc3/BCompare.exe";
+            if (File.Exists(exePath))
+            {
+                System.Diagnostics.Process.Start(exePath, string.Format("{0} {1}", csvOldFile, csvNewFile));
+            }
+            else
+            {
+                System.Diagnostics.Process.Start(tortoiseMergePos, string.Format("{0} {1}", csvOldFile, csvNewFile));
+            }
         }
 
         static void TaskRun(string path, bool isOld)
