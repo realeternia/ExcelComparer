@@ -2,6 +2,7 @@
 using System.Deployment.Application;
 using System.Drawing;
 using System.IO;
+using System.Windows.Forms;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 
@@ -20,6 +21,7 @@ namespace ExcelMerger
             }
         }
 
+
         private static ExcelPackage epMine;
 
         public static void CleanUp()
@@ -32,10 +34,16 @@ namespace ExcelMerger
             }
         }
 
-        public static void BeginMerge()
+        public static string BeginMerge()
         {
-            var dtBase = LoadData(ProArgs.Base);
-            var dtTheirs = LoadData(ProArgs.Theirs);
+            var dtBase = LoadData(ProArgs.Base, SheetMetaManager.AddBase);
+            var dtTheirs = LoadData(ProArgs.Theirs, SheetMetaManager.AddTheir);
+
+            var compareResult = SheetMetaManager.CompareBaseAndTheir();
+            if (compareResult != "")
+            {
+                return compareResult;
+            }
 
             var fi = new FileInfo(ProArgs.Mine);
 
@@ -56,6 +64,12 @@ namespace ExcelMerger
                             colCount = col;
                             break;
                         }
+                    }
+
+                    var compareResult2 = SheetMetaManager.AddAndCompareMine(i-1, sheetIn.Name, colCount);
+                    if (compareResult2 != "")
+                    {
+                        return compareResult2;
                     }
 
                     for (int row = 14; row <= sheetIn.Dimension.End.Row; row++)
@@ -113,10 +127,11 @@ namespace ExcelMerger
                 }
 
             }
+            return "";
         }
 
 
-        private static Dictionary<string, List<CellData>> LoadData(string fileName)
+        private static Dictionary<string, List<CellData>> LoadData(string fileName, SheetMetaManager.AddData func)
         {
             var dict = new Dictionary<string, List<CellData>>();
 
@@ -138,6 +153,14 @@ namespace ExcelMerger
                             break;
                         }
                     }
+
+                    bool isRegular = colCount > 0 && sheetIn.Dimension.End.Row >= 13 &&
+                                     sheetIn.Cells[13, 1].Text == "BEGIN";
+                    if (!isRegular)
+                    {
+                        continue;
+                    }
+                    func(sheetIn.Name, colCount);
 
                     for (int row = 14; row <= sheetIn.Dimension.End.Row; row++)
                     {

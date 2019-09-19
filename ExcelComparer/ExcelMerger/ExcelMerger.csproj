@@ -60,6 +60,7 @@
     <Compile Include="ProArgs.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SheetMetaManager.cs" />
     <EmbeddedResource Include="MergeForm.resx">
       <DependentUpon>MergeForm.cs</DependentUpon>
     </EmbeddedResource>

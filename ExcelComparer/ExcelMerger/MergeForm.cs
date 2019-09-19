@@ -1,16 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 
 namespace ExcelMerger
 {
     public partial class MergeForm : Form
     {
+        private bool hasError;
+
         public MergeForm()
         {
             InitializeComponent();
@@ -20,7 +17,13 @@ namespace ExcelMerger
 
         private void MergeForm_Shown(object sender, EventArgs e)
         {
-            Excel2Csv.BeginMerge();
+            var result = Excel2Csv.BeginMerge();
+            if (result != "")
+            {
+                hasError = true;
+                MessageBox.Show(result, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Close();
+            }
 
             //MergeEvtData.Multiply(100);
             for (int i = 0; i < MergeEvtData.DataList.Count; i++)
@@ -106,6 +109,24 @@ namespace ExcelMerger
 
         private void MergeForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (hasError)
+            {
+                //有错误，就让退吧
+                return;
+            }
+
+            foreach (var evtData in MergeEvtData.DataList)
+            {
+                if (evtData.Conflict)
+                {
+                    if (MessageBox.Show("还有未处理的冲突，如果关闭解决过程不会保存。点击“取消”继续编辑", "警告", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.Cancel)
+                    {
+                        e.Cancel = true;
+                    }
+                    return;
+                }
+            }
+
             Excel2Csv.CleanUp();
         }
     }
