@@ -1,5 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Reflection;
 using System.Windows.Forms;
+using ExcelMerger.Properties;
 
 namespace ExcelMerger
 {
@@ -29,9 +32,26 @@ namespace ExcelMerger
             DataList.Add(evtData);
         }
 
+
+        public static string ToExcelCellName(int x, int y)
+        {
+            if (x < 0) { throw new Exception("invalid parameter"); }
+
+            List<string> chars = new List<string>();
+            do
+            {
+                if (chars.Count > 0) x--;
+                chars.Insert(0, ((char)(x % 26 + (int)'A')).ToString());
+                x = (int)((x - x % 26) / 26);
+            } while (x > 0);
+
+            return y+string.Join(string.Empty, chars.ToArray());
+        }
+
         public override void AddToDV(int i, DataGridViewRowCollection c)
         {
-            c.Add(new string[] { i.ToString(), Label, OldValue, TheirsValue, "使用他的", MyValue, "使用我的" });
+            c.Add(new object[] { Resources.warn, i.ToString(), Label, ToExcelCellName(Column, Row), OldValue, TheirsValue, "使用他的", MyValue, "保留我的" });
+            c[c.Count - 1].Cells[0].ToolTipText = "格子数据发生修改";
         }
 
         public override void Resolve(bool useMine)

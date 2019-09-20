@@ -6,7 +6,7 @@ namespace ExcelMerger
 {
     public partial class MergeForm : Form
     {
-        private bool hasError;
+        private bool hasErrorOnLoad;
 
         public MergeForm()
         {
@@ -20,7 +20,7 @@ namespace ExcelMerger
             var result = Excel2Csv.BeginMerge();
             if (result != "")
             {
-                hasError = true;
+                hasErrorOnLoad = true;
                 MessageBox.Show(result, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Close();
             }
@@ -33,11 +33,11 @@ namespace ExcelMerger
             }
             foreach (DataGridViewRow row in dataGridView1.Rows)
             {
-                if (row.Cells[0].Value == null)
+                if (row.Cells[1].Value == null)
                 {
                     continue;
                 }
-                int index = int.Parse(row.Cells[0].Value.ToString());
+                int index = int.Parse(row.Cells[1].Value.ToString());
                 var mergeData = BaseMergeData.DataList[index];
                 if (!mergeData.Conflict)
                 {
@@ -48,20 +48,20 @@ namespace ExcelMerger
 
         private void HideButtons(DataGridViewRow row)
         {
-            row.Cells[4] = new DataGridViewTextBoxCell();
-            row.Cells[4].Value = "";
             row.Cells[6] = new DataGridViewTextBoxCell();
             row.Cells[6].Value = "";
+            row.Cells[8] = new DataGridViewTextBoxCell();
+            row.Cells[8].Value = "";
 
         }
 
         private void dataGridView1_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
-            if(dataGridView1.Rows[e.RowIndex].Cells[0].Value == null)
+            if(dataGridView1.Rows[e.RowIndex].Cells[1].Value == null)
                 return;
-            int index = int.Parse(dataGridView1.Rows[e.RowIndex].Cells[0].Value.ToString());
+            int index = int.Parse(dataGridView1.Rows[e.RowIndex].Cells[1].Value.ToString());
             var mergeData = BaseMergeData.DataList[index];
-            if (e.ColumnIndex == 3 || e.ColumnIndex == 5)
+            if (e.ColumnIndex == 5 || e.ColumnIndex == 7)
             {
                 if (mergeData.Conflict)
                 {
@@ -82,9 +82,9 @@ namespace ExcelMerger
         {
             bool useTheir = false;
             bool useMine = false;
-            if (e.ColumnIndex == 4)
-                useTheir = true;
             if (e.ColumnIndex == 6)
+                useTheir = true;
+            if (e.ColumnIndex == 8)
                 useMine = true;
 
             var dt = BaseMergeData.DataList[e.RowIndex];
@@ -105,7 +105,7 @@ namespace ExcelMerger
 
         private void MergeForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (hasError)
+            if (hasErrorOnLoad)
             {
                 //有错误，就让退吧
                 return;

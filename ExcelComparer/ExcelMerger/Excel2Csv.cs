@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using OfficeOpenXml;
@@ -60,71 +61,21 @@ namespace ExcelMerger
 
         public static string BeginMerge()
         {
-            dtBase = LoadData(ProArgs.Base, SheetMetaManager.AddBase);
-            dtTheirs = LoadData(ProArgs.Theirs, SheetMetaManager.AddTheir);
-            dtMine = LoadData(ProArgs.Mine, SheetMetaManager.AddMine); //这一次读文件其实可以省掉，但代码更难写
+            try
+            {
+                dtBase = LoadData(ProArgs.Base, SheetMetaManager.AddBase, true);
+                dtTheirs = LoadData(ProArgs.Theirs, SheetMetaManager.AddTheir, false);
+                dtMine = LoadData(ProArgs.Mine, SheetMetaManager.AddMine, false); //这一次读文件其实可以省掉，但代码更难写
+            }
+            catch (Exception e)
+            {
+                return "初始化文件失败\n" + e.Message;
+            }
+
             MarkRowState(dtTheirs, dtBase, dtMine);
             MarkRowState(dtMine, dtBase, dtTheirs);
 
-            foreach (var myRowData in dtMine)
-            {
-                if (myRowData.Value.Tag == "Add")
-                {
-                    if (dtTheirs[myRowData.Key].Tag == "Add")
-                    {
-                        bool sameData = true;
-                        for (int j = 1; j < dtTheirs[myRowData.Key].Datas.Count; j++)
-                        {
-                            if (dtMine[myRowData.Key].Datas[j].Content != dtTheirs[myRowData.Key].Datas[j].Content)
-                            {
-                                sameData = false;
-                                break;
-                            }
-                        }
-
-                        if (sameData) //插了一样的数据，自动merge
-                        {
-                            MergeRowData.Add(myRowData.Key, "无记录", "添加了记录（相同）", "添加了记录（相同）", "", "", "添加了记录（相同）");
-                        }
-                        else
-                        {
-                            MergeRowData.Add(myRowData.Key, "无记录", "添加了记录", "添加了记录（我）", "Modify", "", "");
-                        }
-                    }
-                }
-                else if (myRowData.Value.Tag == "Delete")
-                {
-                    var otherTag = dtTheirs[myRowData.Key].Tag;
-                    if (otherTag == "Modify")
-                    {
-                        MergeRowData.Add(myRowData.Key, "有记录", "修改了记录", "删除了记录（我）", "Add", "", "");
-                    }
-                }
-                else if (myRowData.Value.Tag == "Modify")
-                {
-                    var otherTag = dtTheirs[myRowData.Key].Tag;
-                    if (otherTag == "Modify")
-                    {
-                        // 不用考虑
-                    }
-                    else if (otherTag == "Delete")
-                    {
-                        MergeRowData.Add(myRowData.Key, "有记录", "删除了记录", "修改了记录（我）", "Delete", "", "");
-                    }
-                }
-                else
-                {
-                    var otherTag = dtTheirs[myRowData.Key].Tag;
-                    if (otherTag == "Add")
-                    {
-                        MergeRowData.Add(myRowData.Key, "有记录", "添加了记录", "无修改（我）", "Add", "", "添加了记录");
-                    }
-                    else if (otherTag == "Delete")
-                    {
-                        MergeRowData.Add(myRowData.Key, "有记录", "删除了记录", "无修改（我）", "Delete", "", "删除了记录");
-                    }
-                }
-            }
+            DetectRowChange();
 
             var compareResult = SheetMetaManager.CompareBaseAndTheir();
             if (compareResult != "")
@@ -151,6 +102,13 @@ namespace ExcelMerger
                             colCount = col;
                             break;
                         }
+                    }
+
+                    bool isRegular = colCount > 0 && sheetIn.Dimension.End.Row >= 13 &&
+                                     sheetIn.Cells[13, 1].Text == "BEGIN";
+                    if (!isRegular)
+                    {
+                        continue;
                     }
 
                     var compareResult2 = SheetMetaManager.AddAndCompareMine(i-1, sheetIn.Name, colCount);
@@ -223,6 +181,82 @@ namespace ExcelMerger
             return "";
         }
 
+        private static void DetectRowChange()
+        {
+            foreach (var myRowData in dtMine)
+            {
+                if (myRowData.Value.Tag == "Add")
+                {
+                    if (dtTheirs[myRowData.Key].Tag == "Add")
+                    {
+                        bool sameData = true;
+                        for (int j = 1; j < dtTheirs[myRowData.Key].Datas.Count; j++)
+                        {
+                            if (dtMine[myRowData.Key].Datas[j].Content != dtTheirs[myRowData.Key].Datas[j].Content)
+                            {
+                                sameData = false;
+                                break;
+                            }
+                        }
+
+                        if (sameData) //插了一样的数据，自动merge
+                        {
+                            MergeRowData.Add(myRowData.Key, "无记录", "添加了记录（相同）", "添加了记录（相同）", "", "", "添加了记录（相同）");
+                        }
+                        else
+                        {
+                            MergeRowData.Add(myRowData.Key, "无记录", "添加了记录", "添加了记录（我）", "Modify", "", "");
+                        }
+                    }
+                    else
+                    {
+                        MergeRowData.Add(myRowData.Key, "无记录", "无记录", "添加了记录（我）", "", "", "添加了记录（我）");
+                    }
+                }
+                else if (myRowData.Value.Tag == "Delete")
+                {
+                    var otherTag = dtTheirs[myRowData.Key].Tag;
+                    if (otherTag == "Modify")
+                    {
+                        MergeRowData.Add(myRowData.Key, "有记录", "修改了记录", "删除了记录（我）", "Add", "", "");
+                    }
+                    else if (otherTag == "Delete")
+                    {
+                        //大家都删除，相安无事
+                        MergeRowData.Add(myRowData.Key, "有记录", "删除了记录", "删除了记录", "", "", "删除了记录");
+                    }
+                    else
+                    {
+                        MergeRowData.Add(myRowData.Key, "有记录", "无修改", "删除了记录（我）", "", "", "删除了记录（我）");
+                    }
+                }
+                else if (myRowData.Value.Tag == "Modify")
+                {
+                    var otherTag = dtTheirs[myRowData.Key].Tag;
+                    if (otherTag == "Modify")
+                    {
+                        // 不用考虑
+                    }
+                    else if (otherTag == "Delete")
+                    {
+                        MergeRowData.Add(myRowData.Key, "有记录", "删除了记录", "修改了记录（我）", "Delete", "", "");
+                    }
+                }
+                else
+                {
+                    var otherTag = dtTheirs[myRowData.Key].Tag;
+                    if (otherTag == "Add")
+                    {
+                        MergeRowData.Add(myRowData.Key, "无记录", "添加了记录", "无记录", "Add", "", "添加了记录");
+                    }
+                    else if (otherTag == "Delete")
+                    {
+                        MergeRowData.Add(myRowData.Key, "有记录", "删除了记录", "无修改（我）", "Delete", "", "删除了记录");
+                    }
+                }
+            }
+        }
+
         private static void MarkRowState(Dictionary<string, MyRowData> dtTarget, Dictionary<string, MyRowData> dtBase, Dictionary<string, MyRowData> dtOther)
         {
             foreach (var theirRow in dtTarget)
@@ -252,12 +286,12 @@ namespace ExcelMerger
         }
 
 
-        private static Dictionary<string, MyRowData> LoadData(string fileName, SheetMetaManager.AddData func)
+        private static Dictionary<string, MyRowData> LoadData(string fileName, SheetMetaManager.AddData func, bool isWrite)
         {
             var dict = new Dictionary<string, MyRowData>();
 
             var fi = new FileInfo(fileName);
-            using (ExcelPackage ep = ExcelFileOpener.Open(fi, false))
+            using (ExcelPackage ep = ExcelFileOpener.Open(fi, isWrite))
             {
                 var workbook = ep.Workbook;
 
@@ -325,6 +359,7 @@ namespace ExcelMerger
         {
             var targetCell = sheetIn.Cells[row, col];
             var stl = targetCell.Style;
+            var stlId = targetCell.StyleID;
             targetCell.Clear(); //单元格内部多种格式需要清掉，不然会出现赋值不了的情况
             if (stl.Font != null)
             {
@@ -340,6 +375,7 @@ namespace ExcelMerger
                 targetCell.Style.Fill.BackgroundColor.SetColor(ParseColor(stl.Fill.BackgroundColor.Rgb, Color.White));
             }
 
+            targetCell.StyleID = stlId;
             // 直接赋值好像不对，只能像上面一个一个属性赋值了
             //targetCell.Style.Fill = stl.Fill;
             if (isFormula)

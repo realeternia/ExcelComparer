@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Windows.Forms;
+using ExcelMerger.Properties;
 
 namespace ExcelMerger
 {
@@ -63,7 +64,8 @@ namespace ExcelMerger
 
         public override void AddToDV(int i, DataGridViewRowCollection c)
         {
-            c.Add(new string[] { i.ToString(), Label, DesBase, DesTheir, "使用他的", DesMine, "使用我的" });
+            c.Add(new object[] { Resources.err, i.ToString(), Label, "", DesBase, DesTheir, "使用他的", DesMine, "保留我的" });
+            c[c.Count - 1].Cells[0].ToolTipText = "行数据发生修改";
         }
         public override void Resolve(bool useMine)
         {
