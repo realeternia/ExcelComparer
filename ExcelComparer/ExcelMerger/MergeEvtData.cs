@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
+using System.Windows.Forms;
 
 namespace ExcelMerger
 {
-    public class MergeEvtData
+    public class MergeEvtData : BaseMergeData
     {
-        public string Label;
         public int Row;
         public int Column;
         public string OldValue;
@@ -12,10 +12,6 @@ namespace ExcelMerger
         public bool MyFormula;
         public string TheirsValue;
         public bool TheirFormula;
-        public bool Conflict;
-        public string ConflictResult;
-
-        public static List<MergeEvtData> DataList = new List<MergeEvtData>();
 
         public static void Add(string lb, int row, int column, string old, string my, bool myFormula, string their, bool theirFormula, bool conflict, string result)
         {
@@ -33,13 +29,25 @@ namespace ExcelMerger
             DataList.Add(evtData);
         }
 
-        public static void Multiply(int x)
+        public override void AddToDV(int i, DataGridViewRowCollection c)
         {
-            // 压力测试用
-            var dts = DataList.ToArray();
-            for (int i = 0; i < x; i++)
+            c.Add(new string[] { i.ToString(), Label, OldValue, TheirsValue, "使用他的", MyValue, "使用我的" });
+        }
+
+        public override void Resolve(bool useMine)
+        {
+            if (useMine)
             {
-                DataList.AddRange(dts);
+                //本来就是用自己文件不用改
+                // Excel2Csv.UpdAte(sheetName, dt.Row, dt.Column, dt.MyValue, dt.MyFormula);
+                ConflictResult = MyValue;
+            }
+            else
+            {
+                var datas = Label.Split('-');
+                var sheetName = datas[0];
+                Excel2Csv.UpdAte(sheetName, Row, Column, TheirsValue, TheirFormula);
+                ConflictResult = TheirsValue;
             }
         }
     }

@@ -1,8 +1,6 @@
 ﻿using System.Collections.Generic;
-using System.Deployment.Application;
 using System.Drawing;
 using System.IO;
-using System.Windows.Forms;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 
@@ -10,6 +8,29 @@ namespace ExcelMerger
 {
     public class Excel2Csv
     {
+        public class MyRowData
+        {
+            public string Tag;
+            public List<CellData> Datas;
+
+            public bool Eq(MyRowData other)
+            {
+                if (other == null || other.Datas == null || other.Datas.Count != Datas.Count)
+                {
+                    return false;
+                }
+
+                for (int i = 0; i < Datas.Count; i++)
+                {
+                    if (other.Datas[i].Content != Datas[i].Content)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+        }
         public struct CellData
         {
             public string Content;
@@ -23,6 +44,9 @@ namespace ExcelMerger
 
 
         private static ExcelPackage epMine;
+        private static Dictionary<string, MyRowData> dtBase;
+        private static Dictionary<string, MyRowData> dtTheirs;
+        private static Dictionary<string, MyRowData> dtMine;
 
         public static void CleanUp()
         {
@@ -36,8 +60,71 @@ namespace ExcelMerger
 
         public static string BeginMerge()
         {
-            var dtBase = LoadData(ProArgs.Base, SheetMetaManager.AddBase);
-            var dtTheirs = LoadData(ProArgs.Theirs, SheetMetaManager.AddTheir);
+            dtBase = LoadData(ProArgs.Base, SheetMetaManager.AddBase);
+            dtTheirs = LoadData(ProArgs.Theirs, SheetMetaManager.AddTheir);
+            dtMine = LoadData(ProArgs.Mine, SheetMetaManager.AddMine); //这一次读文件其实可以省掉，但代码更难写
+            MarkRowState(dtTheirs, dtBase, dtMine);
+            MarkRowState(dtMine, dtBase, dtTheirs);
+
+            foreach (var myRowData in dtMine)
+            {
+                if (myRowData.Value.Tag == "Add")
+                {
+                    if (dtTheirs[myRowData.Key].Tag == "Add")
+                    {
+                        bool sameData = true;
+                        for (int j = 1; j < dtTheirs[myRowData.Key].Datas.Count; j++)
+                        {
+                            if (dtMine[myRowData.Key].Datas[j].Content != dtTheirs[myRowData.Key].Datas[j].Content)
+                            {
+                                sameData = false;
+                                break;
+                            }
+                        }
+
+                        if (sameData) //插了一样的数据，自动merge
+                        {
+                            MergeRowData.Add(myRowData.Key, "无记录", "添加了记录（相同）", "添加了记录（相同）", "", "", "添加了记录（相同）");
+                        }
+                        else
+                        {
+                            MergeRowData.Add(myRowData.Key, "无记录", "添加了记录", "添加了记录（我）", "Modify", "", "");
+                        }
+                    }
+                }
+                else if (myRowData.Value.Tag == "Delete")
+                {
+                    var otherTag = dtTheirs[myRowData.Key].Tag;
+                    if (otherTag == "Modify")
+                    {
+                        MergeRowData.Add(myRowData.Key, "有记录", "修改了记录", "删除了记录（我）", "Add", "", "");
+                    }
+                }
+                else if (myRowData.Value.Tag == "Modify")
+                {
+                    var otherTag = dtTheirs[myRowData.Key].Tag;
+                    if (otherTag == "Modify")
+                    {
+                        // 不用考虑
+                    }
+                    else if (otherTag == "Delete")
+                    {
+                        MergeRowData.Add(myRowData.Key, "有记录", "删除了记录", "修改了记录（我）", "Delete", "", "");
+                    }
+                }
+                else
+                {
+                    var otherTag = dtTheirs[myRowData.Key].Tag;
+                    if (otherTag == "Add")
+                    {
+                        MergeRowData.Add(myRowData.Key, "有记录", "添加了记录", "无修改（我）", "Add", "", "添加了记录");
+                    }
+                    else if (otherTag == "Delete")
+                    {
+                        MergeRowData.Add(myRowData.Key, "有记录", "删除了记录", "无修改（我）", "Delete", "", "删除了记录");
+                    }
+                }
+            }
 
             var compareResult = SheetMetaManager.CompareBaseAndTheir();
             if (compareResult != "")
@@ -98,8 +185,14 @@ namespace ExcelMerger
                                 }
 
                                 string idKey = string.Format("{0}-key={1}", sheetIn.Name, id);
-                                var baseCell = dtBase[idKey][col];
-                                var theirsCell = dtTheirs[idKey][col];
+                                if (!dtTheirs.ContainsKey(idKey) || dtTheirs[idKey].Tag == "Add" || dtTheirs[idKey].Tag == "Delete" || dtMine[idKey].Tag == "Add")
+                                {
+                                    // 增减行的情况，这里不处理
+                                    break;
+                                }
+                                var baseCell = dtBase[idKey].Datas[col];
+                                var theirsCell = dtTheirs[idKey].Datas[col];
+
                                 if (myCellContent != baseCell.Content || myCellContent != theirsCell.Content)
                                 {
                                     bool conflict = false;
@@ -130,10 +223,38 @@ namespace ExcelMerger
             return "";
         }
 
-
-        private static Dictionary<string, List<CellData>> LoadData(string fileName, SheetMetaManager.AddData func)
+        private static void MarkRowState(Dictionary<string, MyRowData> dtTarget, Dictionary<string, MyRowData> dtBase, Dictionary<string, MyRowData> dtOther)
         {
-            var dict = new Dictionary<string, List<CellData>>();
+            foreach (var theirRow in dtTarget)
+            {
+                if (!dtBase.ContainsKey(theirRow.Key))
+                {
+                    if (theirRow.Value.Datas != null)
+                        theirRow.Value.Tag = "Add";
+                    if (!dtOther.ContainsKey(theirRow.Key))
+                    {
+                        dtOther[theirRow.Key] = new MyRowData { Tag = "" }; //帮另一组加一条
+                    }
+                }
+                else if (!dtBase[theirRow.Key].Eq(theirRow.Value))
+                {
+                    theirRow.Value.Tag = "Modify";
+                }
+            }
+
+            foreach (var baseRow in dtBase)
+            {
+                if (!dtTarget.ContainsKey(baseRow.Key) || dtTarget[baseRow.Key].Datas == null)
+                {
+                    dtTarget[baseRow.Key] = new MyRowData {Tag = "Delete"};
+                }
+            }
+        }
+
+
+        private static Dictionary<string, MyRowData> LoadData(string fileName, SheetMetaManager.AddData func)
+        {
+            var dict = new Dictionary<string, MyRowData>();
 
             var fi = new FileInfo(fileName);
             using (ExcelPackage ep = ExcelFileOpener.Open(fi, false))
@@ -190,7 +311,9 @@ namespace ExcelMerger
                             dts.Add(cellInfo);
                         }
 
-                        dict[string.Format("{0}-key={1}", sheetIn.Name, dts[2].Content)] = dts;
+                        var rowData = new MyRowData();
+                        rowData.Datas = dts;
+                        dict[string.Format("{0}-key={1}", sheetIn.Name, dts[2].Content)] = rowData;
                     }
                 }
             }
@@ -252,7 +375,7 @@ namespace ExcelMerger
 
         private static Color ParseColor(string txt, Color dc)
         {
-            if (txt == "")
+            if (string.IsNullOrEmpty(txt))
                 return dc;
 
             return System.Drawing.Color.FromArgb(
@@ -260,6 +383,83 @@ namespace ExcelMerger
             int.Parse(txt.Substring(4, 2), System.Globalization.NumberStyles.AllowHexSpecifier),
             int.Parse(txt.Substring(6, 2), System.Globalization.NumberStyles.AllowHexSpecifier)
                 );
+        }
+
+        public static void OnLastErrorSolved()
+        {
+            Dictionary<string ,MyRowData> addList = new Dictionary<string, MyRowData>();
+            List<string> removeList = new List<string>();
+            Dictionary<string, MyRowData> modifyList = new Dictionary<string, MyRowData>();
+            foreach (var baseMergeData in BaseMergeData.DataList)
+            {
+                if (!baseMergeData.IsRowError)
+                    continue;
+
+                var rowError = baseMergeData as MergeRowData;
+
+                //使用我的修改就忽略掉
+                if (rowError.ConflictResult == rowError.DesMine)
+                    continue;
+
+                if (rowError.TheirTag == "Add")
+                {
+                    addList[rowError.Label] = dtTheirs[rowError.Label];
+                }
+                else if (rowError.TheirTag == "Delete")
+                {
+                    removeList.Add(rowError.Label);
+                }
+                else if (rowError.TheirTag == "Modify")
+                {
+                    modifyList[rowError.Label] = dtTheirs[rowError.Label];
+                }
+            }
+
+            var workbook = epMine.Workbook;
+
+            for (int i = 1; i <= workbook.Worksheets.Count; i++)
+            {
+                var sheetIn = workbook.Worksheets[i];
+                int row;
+                for (row = 14; row <= sheetIn.Dimension.End.Row; row++)
+                {
+                    var idCellStr = sheetIn.GetValue(row, 2);
+                    if (row >= 14 && idCellStr == null)
+                        break;
+
+                    string rowKey = string.Format("{0}-key={1}", sheetIn.Name, idCellStr.ToString());
+                    if (removeList.Contains(rowKey))
+                    {
+                        sheetIn.DeleteRow(row);
+                        row--;
+                        continue;
+                    }
+
+                    MyRowData rowData;
+                    if (modifyList.TryGetValue(rowKey, out rowData))
+                    {
+                        //做替换
+                        for (int j = 1; j < rowData.Datas.Count; j++)
+                        {
+                            UpdateInner(sheetIn, row, j, rowData.Datas[j].Content, rowData.Datas[j].IsFormula);
+                        }
+                    }
+                }
+
+                foreach (var rowData in addList)
+                {
+                    if (rowData.Key.StartsWith(sheetIn.Name))
+                    {
+                        sheetIn.InsertRow(row, 1, row-1);
+                        row++; //插入到最后
+                        for (int j = 1; j < rowData.Value.Datas.Count; j++)
+                        {
+                            UpdateInner(sheetIn, row, j, rowData.Value.Datas[j].Content, rowData.Value.Datas[j].IsFormula);
+                        }
+                    }
+                }
+            }
+
         }
     }
 }

@@ -15,6 +15,7 @@ namespace ExcelMerger
 
         private static List<SheetMetaData> dictBase = new List<SheetMetaData>();
         private static List<SheetMetaData> dictTheir = new List<SheetMetaData>();
+        private static List<SheetMetaData> dictMine = new List<SheetMetaData>();
 
         public static void AddBase(string name, int column)
         {
@@ -23,6 +24,10 @@ namespace ExcelMerger
         public static void AddTheir(string name, int column)
         {
             dictTheir.Add(new SheetMetaData { SheetName = name, ColumnCount = column });
+        }
+        public static void AddMine(string name, int column)
+        {
+            dictMine.Add(new SheetMetaData { SheetName = name, ColumnCount = column });
         }
 
         public static string CompareBaseAndTheir()

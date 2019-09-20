@@ -26,10 +26,10 @@ namespace ExcelMerger
             }
 
             //MergeEvtData.Multiply(100);
-            for (int i = 0; i < MergeEvtData.DataList.Count; i++)
+            for (int i = 0; i < BaseMergeData.DataList.Count; i++)
             {
-                var mergeData = MergeEvtData.DataList[i];
-                dataGridView1.Rows.Add(new string[] { i.ToString(), mergeData.Label, mergeData.OldValue, mergeData.TheirsValue, "使用他的", mergeData.MyValue, "使用我的" });
+                var mergeData = BaseMergeData.DataList[i];
+                mergeData.AddToDV(i, dataGridView1.Rows);
             }
             foreach (DataGridViewRow row in dataGridView1.Rows)
             {
@@ -38,7 +38,7 @@ namespace ExcelMerger
                     continue;
                 }
                 int index = int.Parse(row.Cells[0].Value.ToString());
-                var mergeData = MergeEvtData.DataList[index];
+                var mergeData = BaseMergeData.DataList[index];
                 if (!mergeData.Conflict)
                 {
                     HideButtons(row);
@@ -60,7 +60,7 @@ namespace ExcelMerger
             if(dataGridView1.Rows[e.RowIndex].Cells[0].Value == null)
                 return;
             int index = int.Parse(dataGridView1.Rows[e.RowIndex].Cells[0].Value.ToString());
-            var mergeData = MergeEvtData.DataList[index];
+            var mergeData = BaseMergeData.DataList[index];
             if (e.ColumnIndex == 3 || e.ColumnIndex == 5)
             {
                 if (mergeData.Conflict)
@@ -87,23 +87,19 @@ namespace ExcelMerger
             if (e.ColumnIndex == 6)
                 useMine = true;
 
-            var dt = MergeEvtData.DataList[e.RowIndex];
-            var datas = dt.Label.Split('-');
-            var sheetName = datas[0];
-            if (useMine)
-            {
-                //本来就是用自己文件不用改
-               // Excel2Csv.UpdAte(sheetName, dt.Row, dt.Column, dt.MyValue, dt.MyFormula);
-               dt.ConflictResult = dt.MyValue;
-            }
-            else if (useTheir)
-            {
-                Excel2Csv.UpdAte(sheetName, dt.Row, dt.Column, dt.TheirsValue, dt.TheirFormula);
-                dt.ConflictResult = dt.TheirsValue;
-            }
+            var dt = BaseMergeData.DataList[e.RowIndex];
+            dt.Resolve(useMine);
             HideButtons(dataGridView1.Rows[e.RowIndex]);
             dt.Conflict = false;
             dataGridView1.Invalidate();
+
+            foreach (var evtData in BaseMergeData.DataList)
+            {
+                if (evtData.Conflict)
+                    return;
+            }
+
+            Excel2Csv.OnLastErrorSolved();//行merge都在这里统一搞
             // Excel2Csv.Save();
         }
 
@@ -115,7 +111,7 @@ namespace ExcelMerger
                 return;
             }
 
-            foreach (var evtData in MergeEvtData.DataList)
+            foreach (var evtData in BaseMergeData.DataList)
             {
                 if (evtData.Conflict)
                 {
