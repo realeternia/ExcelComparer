@@ -50,7 +50,7 @@ namespace ExcelMerger
 
         public override void AddToDV(int i, DataGridViewRowCollection c)
         {
-            c.Add(new object[] { Resources.warn, i.ToString(), Label, ToExcelCellName(Column, Row), OldValue, TheirsValue, "使用他的", MyValue, "保留我的" });
+            c.Add(new object[] { Resources.warn, i.ToString(), Label, ToExcelCellName(Column-1, Row), OldValue, TheirsValue, "使用他的", MyValue, "保留我的" });
             c[c.Count - 1].Cells[0].ToolTipText = "格子数据发生修改";
         }
 

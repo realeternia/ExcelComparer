@@ -22,6 +22,10 @@
             Theirs = args[1];
             Mine = args[2];
             Merged = args[3];
+
+            //Base = @"D:\svn-pm03\tables/抽卡_配置表.xlsx.r128998";
+            //Theirs = @"D:\svn-pm03\tables/抽卡_配置表.xlsx.r141131";
+            //Mine = @"D:\svn-pm03\tables/抽卡_配置表.xlsx";
         }
     }
 }

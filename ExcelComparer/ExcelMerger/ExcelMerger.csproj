@@ -91,6 +91,8 @@
   <ItemGroup>
     <Content Include="EPPlus.dll" />
     <Content Include="ico.ico" />
+    <None Include="Resources\save.jpg" />
+    <None Include="Resources\bell.jpg" />
     <None Include="Resources\warn.png" />
     <None Include="Resources\err.png" />
   </ItemGroup>

@@ -63,13 +63,13 @@ namespace ExcelMerger
         {
             try
             {
-                dtBase = LoadData(ProArgs.Base, SheetMetaManager.AddBase, true);
-                dtTheirs = LoadData(ProArgs.Theirs, SheetMetaManager.AddTheir, false);
-                dtMine = LoadData(ProArgs.Mine, SheetMetaManager.AddMine, false); //这一次读文件其实可以省掉，但代码更难写
+                dtBase = LoadData(ProArgs.Base, SheetMetaManager.AddBase, false, out _);
+                dtTheirs = LoadData(ProArgs.Theirs, SheetMetaManager.AddTheir, false, out _);
+                dtMine = LoadData(ProArgs.Mine, SheetMetaManager.AddMine, true, out epMine); //这一次读文件其实可以省掉，但代码更难写
             }
             catch (Exception e)
             {
-                return "初始化文件失败\n" + e.Message;
+                return "文件初始化失败" + e.Message;
             }
 
             MarkRowState(dtTheirs, dtBase, dtMine);
@@ -83,24 +83,24 @@ namespace ExcelMerger
                 return compareResult;
             }
 
-            var fi = new FileInfo(ProArgs.Mine);
-
-            //这里不using，因为需要hold住这个句柄，可能需要resolve冲突
-            epMine = ExcelFileOpener.Open(fi, true);
             {
                 var workbook = epMine.Workbook;
 
                 for (int i = 1; i <= workbook.Worksheets.Count; i++)
                 {
                     var sheetIn = workbook.Worksheets[i];
-                    int colCount = sheetIn.Dimension.End.Column;
-                    for (int col = 2; col <= colCount; col++)
+                    int colCount = 0;
+                    if (sheetIn.Dimension != null)
                     {
-                        var dt = sheetIn.GetValue(9, col);
-                        if (dt == null)
+                        colCount = sheetIn.Dimension.End.Column;
+                        for (int col = 2; col <= colCount; col++)
                         {
-                            colCount = col;
-                            break;
+                            var dt = sheetIn.GetValue(9, col);
+                            if (dt == null)
+                            {
+                                colCount = col;
+                                break;
+                            }
                         }
                     }
 
@@ -286,26 +286,30 @@ namespace ExcelMerger
         }
 
 
-        private static Dictionary<string, MyRowData> LoadData(string fileName, SheetMetaManager.AddData func, bool isWrite)
+        private static Dictionary<string, MyRowData> LoadData(string fileName, SheetMetaManager.AddData func, bool isWrite, out ExcelPackage epo)
         {
             var dict = new Dictionary<string, MyRowData>();
 
             var fi = new FileInfo(fileName);
-            using (ExcelPackage ep = ExcelFileOpener.Open(fi, isWrite))
+            ExcelPackage ep = ExcelFileOpener.Open(fi, isWrite);
             {
                 var workbook = ep.Workbook;
 
                 for (int i = 1; i <= workbook.Worksheets.Count; i++)
                 {
                     var sheetIn = workbook.Worksheets[i];
-                    int colCount = sheetIn.Dimension.End.Column;
-                    for (int col = 2; col <= colCount; col++)
+                    int colCount = 0;
+                    if (sheetIn.Dimension != null)
                     {
-                        var dt = sheetIn.GetValue(9, col);
-                        if (dt == null)
+                        colCount = sheetIn.Dimension.End.Column;
+                        for (int col = 2; col <= colCount; col++)
                         {
-                            colCount = col;
-                            break;
+                            var dt = sheetIn.GetValue(9, col);
+                            if (dt == null)
+                            {
+                                colCount = col;
+                                break;
+                            }
                         }
                     }
 
@@ -350,6 +354,16 @@ namespace ExcelMerger
                         dict[string.Format("{0}-key={1}", sheetIn.Name, dts[2].Content)] = rowData;
                     }
                 }
+            }
+
+            if (isWrite)
+            {
+                epo = ep;
+            }
+            else
+            {
+                ep.Dispose();
+                epo = null;
             }
 
             return dict;
@@ -457,6 +471,10 @@ namespace ExcelMerger
             {
                 var sheetIn = workbook.Worksheets[i];
                 int row;
+                if (sheetIn.Dimension == null)
+                {
+                    continue;
+                }
                 for (row = 14; row <= sheetIn.Dimension.End.Row; row++)
                 {
                     var idCellStr = sheetIn.GetValue(row, 2);

@@ -23,12 +23,23 @@ namespace ExcelMerger
                 hasErrorOnLoad = true;
                 MessageBox.Show(result, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Close();
+                return;
             }
 
             //MergeEvtData.Multiply(100);
+            RefreshDvData();
+        }
+
+        private void RefreshDvData()
+        {
+            dataGridView1.Rows.Clear();
             for (int i = 0; i < BaseMergeData.DataList.Count; i++)
             {
                 var mergeData = BaseMergeData.DataList[i];
+                if (!mergeData.Conflict && toolStripButton1.Checked)
+                {
+                    continue;
+                }
                 mergeData.AddToDV(i, dataGridView1.Rows);
             }
             foreach (DataGridViewRow row in dataGridView1.Rows)
@@ -87,7 +98,8 @@ namespace ExcelMerger
             if (e.ColumnIndex == 8)
                 useMine = true;
 
-            var dt = BaseMergeData.DataList[e.RowIndex];
+            int index = int.Parse(dataGridView1.Rows[e.RowIndex].Cells[1].Value.ToString());
+            var dt = BaseMergeData.DataList[index];
             dt.Resolve(useMine);
             HideButtons(dataGridView1.Rows[e.RowIndex]);
             dt.Conflict = false;
@@ -124,6 +136,17 @@ namespace ExcelMerger
             }
 
             Excel2Csv.CleanUp();
+        }
+
+        private void toolStripButton1_Click(object sender, EventArgs e)
+        {
+            toolStripButton1.Checked = !toolStripButton1.Checked;
+            RefreshDvData();
+        }
+
+        private void toolStripButton2_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
