@@ -11,6 +11,8 @@ namespace ExcelMerger
         public string Label; // sheet + key
         public string ConflictResult;
         public bool Conflict;
+        public bool AutoMerge; //自动合并
+
         public virtual bool IsRowError
         {
             get { return false; }
@@ -59,6 +61,7 @@ namespace ExcelMerger
             evtData.MyTag = tmine;
             evtData.Conflict = result == "";
             evtData.ConflictResult = result;
+            evtData.AutoMerge = result != "";
             DataList.Add(evtData);
         }
 

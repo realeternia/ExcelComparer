@@ -49,11 +49,18 @@ namespace ExcelMerger
         private static Dictionary<string, MyRowData> dtTheirs;
         private static Dictionary<string, MyRowData> dtMine;
 
-        public static void CleanUp()
+        public static void Save()
         {
             if (epMine != null)
             {
                 epMine.Save();
+            }
+        }
+
+        public static void CleanUp()
+        {
+            if (epMine != null)
+            {
                 epMine.Dispose();
                 epMine = null;
             }
@@ -158,7 +165,7 @@ namespace ExcelMerger
                                     if (myCellContent == baseCell.Content && baseCell.Content != theirsCell.Content)
                                     {
                                         // 自动解决冲突，用别人的值
-                                        UpdateInner(sheetIn, row, col, theirsCell.Content, theirsCell.IsFormula);
+                                       // UpdateInner(sheetIn, row, col, theirsCell.Content, theirsCell.IsFormula);
                                         conflictResult = theirsCell.Content;
                                     }
                                     else if (myCellContent != baseCell.Content && baseCell.Content != theirsCell.Content && myCellContent != theirsCell.Content)
@@ -437,6 +444,23 @@ namespace ExcelMerger
 
         public static void OnLastErrorSolved()
         {
+            //先处理格子错误
+            foreach (var baseMergeData in BaseMergeData.DataList)
+            {
+                if (baseMergeData.IsRowError)
+                    continue;
+
+                var cellError = baseMergeData as MergeEvtData;
+                // 使用mine就当无事发生
+                if (cellError.ConflictResult == cellError.MyValue)
+                    continue;
+
+                var datas = cellError.Label.Split('-');
+                var sheetName = datas[0];
+                UpdAte(sheetName, cellError.Row, cellError.Column, cellError.TheirsValue, cellError.TheirFormula);
+            }
+
+            //再处理行错误
             Dictionary<string ,MyRowData> addList = new Dictionary<string, MyRowData>();
             List<string> removeList = new List<string>();
             Dictionary<string, MyRowData> modifyList = new Dictionary<string, MyRowData>();
@@ -505,11 +529,11 @@ namespace ExcelMerger
                     if (rowData.Key.StartsWith(sheetIn.Name))
                     {
                         sheetIn.InsertRow(row, 1, row-1);
-                        row++; //插入到最后
                         for (int j = 1; j < rowData.Value.Datas.Count; j++)
                         {
                             UpdateInner(sheetIn, row, j, rowData.Value.Datas[j].Content, rowData.Value.Datas[j].IsFormula);
                         }
+                        row++; //插入到最后
                     }
                 }
             }

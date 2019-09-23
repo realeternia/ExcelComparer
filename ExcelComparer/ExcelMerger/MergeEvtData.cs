@@ -29,6 +29,7 @@ namespace ExcelMerger
             evtData.TheirFormula = theirFormula;
             evtData.Conflict = conflict;
             evtData.ConflictResult = result;
+            evtData.AutoMerge = !conflict;
             DataList.Add(evtData);
         }
 
@@ -64,9 +65,9 @@ namespace ExcelMerger
             }
             else
             {
-                var datas = Label.Split('-');
-                var sheetName = datas[0];
-                Excel2Csv.UpdAte(sheetName, Row, Column, TheirsValue, TheirFormula);
+                //var datas = Label.Split('-');
+                //var sheetName = datas[0];
+                //Excel2Csv.UpdAte(sheetName, Row, Column, TheirsValue, TheirFormula);
                 ConflictResult = TheirsValue;
             }
         }

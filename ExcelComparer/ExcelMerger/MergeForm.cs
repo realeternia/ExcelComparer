@@ -7,12 +7,14 @@ namespace ExcelMerger
     public partial class MergeForm : Form
     {
         private bool hasErrorOnLoad;
+        private bool hasSaved;
 
         public MergeForm()
         {
             InitializeComponent();
             dataGridView1.AllowUserToAddRows = false;
             dataGridView1.AllowUserToDeleteRows = false;
+            dataGridView1.AllowUserToResizeRows = false;
         }
 
         private void MergeForm_Shown(object sender, EventArgs e)
@@ -83,7 +85,7 @@ namespace ExcelMerger
                     var myVal = dataGridView1.Rows[e.RowIndex].Cells[e.ColumnIndex].Value.ToString();
                     if (myVal == mergeData.ConflictResult)
                     {
-                        e.CellStyle.BackColor = Color.Lime;
+                        e.CellStyle.BackColor = mergeData.AutoMerge ? Color.Lime : Color.Orange;
                     }
                 }
             }
@@ -101,18 +103,10 @@ namespace ExcelMerger
             int index = int.Parse(dataGridView1.Rows[e.RowIndex].Cells[1].Value.ToString());
             var dt = BaseMergeData.DataList[index];
             dt.Resolve(useMine);
-            HideButtons(dataGridView1.Rows[e.RowIndex]);
+            // 选择因为可以来回切，所以不隐藏
+          //  HideButtons(dataGridView1.Rows[e.RowIndex]);
             dt.Conflict = false;
             dataGridView1.Invalidate();
-
-            foreach (var evtData in BaseMergeData.DataList)
-            {
-                if (evtData.Conflict)
-                    return;
-            }
-
-            Excel2Csv.OnLastErrorSolved();//行merge都在这里统一搞
-            // Excel2Csv.Save();
         }
 
         private void MergeForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -123,19 +117,14 @@ namespace ExcelMerger
                 return;
             }
 
-            foreach (var evtData in BaseMergeData.DataList)
+            if (!hasSaved)
             {
-                if (evtData.Conflict)
+                if (MessageBox.Show("冲突解决未保存，点击“确定”继续关闭，结果不会保存。点击“取消”继续编辑", "警告", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.Cancel)
                 {
-                    if (MessageBox.Show("还有未处理的冲突，如果关闭解决过程不会保存。点击“取消”继续编辑", "警告", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.Cancel)
-                    {
-                        e.Cancel = true;
-                    }
-                    return;
+                    e.Cancel = true;
                 }
+                return;
             }
-
-            Excel2Csv.CleanUp();
         }
 
         private void toolStripButton1_Click(object sender, EventArgs e)
@@ -146,7 +135,21 @@ namespace ExcelMerger
 
         private void toolStripButton2_Click(object sender, EventArgs e)
         {
+            foreach (var evtData in BaseMergeData.DataList)
+            {
+                if (evtData.Conflict)
+                {
+                    MessageBox.Show("还有未处理的冲突，无法保存", "警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
 
+            Excel2Csv.OnLastErrorSolved();//行merge都在这里统一搞
+            Excel2Csv.Save();
+            hasSaved = true;
+            toolStripButton2.Enabled = false;
+
+            MessageBox.Show("保存成功", "信息", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }
