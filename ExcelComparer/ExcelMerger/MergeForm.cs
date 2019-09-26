@@ -42,14 +42,17 @@ namespace ExcelMerger
                 {
                     continue;
                 }
+
                 mergeData.AddToDV(i, dataGridView1.Rows);
             }
+
             foreach (DataGridViewRow row in dataGridView1.Rows)
             {
                 if (row.Cells[1].Value == null)
                 {
                     continue;
                 }
+
                 int index = int.Parse(row.Cells[1].Value.ToString());
                 var mergeData = BaseMergeData.DataList[index];
                 if (!mergeData.Conflict)
@@ -70,7 +73,7 @@ namespace ExcelMerger
 
         private void dataGridView1_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
-            if(dataGridView1.Rows[e.RowIndex].Cells[1].Value == null)
+            if (dataGridView1.Rows[e.RowIndex].Cells[1].Value == null)
                 return;
             int index = int.Parse(dataGridView1.Rows[e.RowIndex].Cells[1].Value.ToString());
             var mergeData = BaseMergeData.DataList[index];
@@ -104,7 +107,7 @@ namespace ExcelMerger
             var dt = BaseMergeData.DataList[index];
             dt.Resolve(useMine);
             // 选择因为可以来回切，所以不隐藏
-          //  HideButtons(dataGridView1.Rows[e.RowIndex]);
+            //  HideButtons(dataGridView1.Rows[e.RowIndex]);
             dt.Conflict = false;
             dataGridView1.Invalidate();
         }
@@ -119,10 +122,12 @@ namespace ExcelMerger
 
             if (!hasSaved)
             {
-                if (MessageBox.Show("冲突解决未保存，点击“确定”继续关闭，结果不会保存。点击“取消”继续编辑", "警告", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.Cancel)
+                if (MessageBox.Show("冲突解决未保存，点击“确定”继续关闭，结果不会保存。点击“取消”继续编辑", "警告", MessageBoxButtons.OKCancel,
+                        MessageBoxIcon.Warning) == DialogResult.Cancel)
                 {
                     e.Cancel = true;
                 }
+
                 return;
             }
         }
@@ -144,12 +149,33 @@ namespace ExcelMerger
                 }
             }
 
-            Excel2Csv.OnLastErrorSolved();//行merge都在这里统一搞
+            Excel2Csv.OnLastErrorSolved(); //行merge都在这里统一搞
             Excel2Csv.Save();
             hasSaved = true;
             toolStripButton2.Enabled = false;
 
+            RunExeByProcess("svn.exe", "resolved " + ProArgs.Mine);
+
             MessageBox.Show("保存成功", "信息", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        public static void RunExeByProcess(string exePath, string argument)
+        {
+            //开启新线程
+            System.Diagnostics.Process process = new System.Diagnostics.Process();
+            //调用的exe的名称
+            process.StartInfo.FileName = exePath;
+            //传递进exe的参数
+            process.StartInfo.Arguments = argument;
+            process.StartInfo.UseShellExecute = false;
+            //不显示exe的界面
+            process.StartInfo.CreateNoWindow = true;
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.RedirectStandardInput = true;
+            process.Start();
+
+            process.StandardInput.AutoFlush = true;
+            process.WaitForExit();
         }
     }
 }

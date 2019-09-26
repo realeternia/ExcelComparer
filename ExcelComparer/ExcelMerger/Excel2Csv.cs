@@ -131,7 +131,7 @@ namespace ExcelMerger
                             break;
                         }
 
-                        int id = 0;
+                        string idStr = "";
                         for (int col = 2; col <= colCount; col++)
                         {
                             var cell = sheetIn.Cells[row, col];
@@ -139,7 +139,7 @@ namespace ExcelMerger
                             {
                                 if (col == 2)
                                 {
-                                    id = int.Parse(cell.Text);
+                                    idStr = cell.Text;
                                 }
                                 var myCellContent = cell.Text;
                                 bool myFormula = false;
@@ -149,7 +149,7 @@ namespace ExcelMerger
                                     myFormula = true;
                                 }
 
-                                string idKey = string.Format("{0}-key={1}", sheetIn.Name, id);
+                                string idKey = string.Format("{0}-key={1}", sheetIn.Name, idStr);
                                 if (!dtTheirs.ContainsKey(idKey) || dtTheirs[idKey].Tag == "Add" || dtTheirs[idKey].Tag == "Delete" || dtMine[idKey].Tag == "Add")
                                 {
                                     // 增减行的情况，这里不处理
